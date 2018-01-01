@@ -1,0 +1,35 @@
+PARSE TREE:
+assignment
+	ident(a)
+	assign_op
+	expression
+		term
+			factor
+				int(1)
+			mult_op
+			term
+				factor
+					int(2)
+		add_op
+		expression
+			term
+				factor
+					left_paren
+					expression
+						term
+							factor
+								int(3)
+						sub_op
+						expression
+							term
+								factor
+									int(4)
+					right_paren
+				div_op
+				term
+					factor
+						int(5)
+	semicolon
+
+EVALUATION:
+a = 1.8
