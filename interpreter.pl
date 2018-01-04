@@ -104,6 +104,9 @@ parse(-ParseTree)-->
 ***/
 
 /* WRITE YOUR CODE FOR THE PARSER HERE */
+parse(ParseTree) -->
+	block(ParseTree).
+
 block(block('left_curly', S, 'right_curly')) -->
 	['{'],
 	stmts(S),
@@ -163,55 +166,51 @@ evaluate(+ParseTree,+VariablesIn,-VariablesOut):-
 ***/
 	
 /* WRITE YOUR CODE FOR THE EVALUATOR HERE */
+evaluate(+block(_,Stmts,_),+VariablesIn,-VariablesOut):-
+	evaluate_stmts(Stmts,VariablesIn,VariablesOut).
 
-evaluate(+ParseTree,+VariablesIn,-VariablesOut):-
+%% Empty statement -> finished	
+evaluate_stmts(+statements,+VariablesIn,-VariablesIn).
 
-.
-evaluate(block(_,X,_),+VariablesIn,-VariablesOut):-
-	evaluate(X,+VariablesIn,-VariablesOut).
+evaluate_stmts(statements(Assign,Stmts),VariablesIn,VariablesOut):-
+	evaluate_assign(Assign,VariablesIn,VariablesNew),
+	evaluate_stmts(Stmts,VariablesNew,VariablesOut).
+
+evaluate_assign(assignment(ident(Ident),'assign_op',Expr,_),VariablesIn,[Ident = Value | VariablesIn]):-
+	evaluate_expr(Expr,nil,0,Value,VariablesIn).
+
+evaluate_expr(expression(Term),Op,Prec,Res,VariablesIn):-
+	evaluate_term(Term,nil,0,Res2,VariablesIn),
+	eval(Prec,Res2,Op,Res).
+evaluate_expr(expression(Term,Op1,Expr),Op2,Prec,Res,VariablesIn):-
+	evaluate_term(Term,nil,0,Res2,VariablesIn),
+	evaluate_expr(Expr,Op1,Res3,Res,VariablesIn),
+	eval(Prec,Res2,Op2,Res3).
+
+evaluate_term(term(Factor),Op,Prec,Res,VariablesIn):-
+	evaluate_factor(Factor,Res2,VariablesIn),
+	eval(Prec,Res2,Op,Res).
+evaluate_term(term(Factor,Op1,Term),Op2,Prec,Res,VariablesIn):-
+	evaluate_factor(Factor,Res2,VariablesIn),
+	evaluate_term(Term,Op1,Res3,Res,VariablesIn),
+	eval(Prec,Res2,Op2,Res3).
+
+evaluate_factor(factor(int(Int)),Int,_).
+evaluate_factor(factor(ident(Ident)),Res,VariablesIn):-
+	evaluate_ident(Ident,VariablesIn,Res).
+evaluate_factor(factor(_,Expr,_), Res,VariablesIn):-
+	evaluate_expr(Expr,nil,0,Res,VariablesIn).
+
+eval(X,Y,'add_op',X+Y).
+eval(X,Y,'sub_op',X-Y).
+eval(X,Y,'mult_op',X*Y).
+eval(X,Y,'div_op',X/Y).
+eval(_,Y,nil,Y).
 	
-evaluate(statements,+VariablesIn,-VariablesIn).
-
-evaluate(statements(Assign,Stmts),+VariablesIn,-VariablesOut):-
-
-evaluate(assignment(Ident,'assign_op',Expr,'semicolon'),+VariablesIn,-VariablesOut):-
-
-evaluate(expression(Term),+VariablesIn,-VariablesOut):-
-
-evaluate(expression(Term,'plus_op',Expr),+VariablesIn,-VariablesOut):-
-
-evaluate(expression(Term,'minus_op',Expr),+VariablesIn,-VariablesOut):-
-
-evaluate(term(X),+VariablesIn,-VariablesOut):-
-
-evaluate(term(Factor,'mult_op',Term),+VariablesIn,-VariablesOut):-
-
-evaluate(term(Factor,'div_op',Term),+VariablesIn,-VariablesOut):-
-
-evaluate(factor(Int),+VariablesIn,-VariablesOut):-
-
-evaluate(factor(Id),+VariablesIn,-VariablesOut):-
-
-evaluate(factor('left_paren',Expr,'right_paren'),+VariablesIn,-VariablesOut):-
-
-evaluate(int(X),+VariablesIn,-VariablesOut):-
 	
-evaluate(ident(X),+[X,Y|Vars],-[X,Y|Vars]).
+evaluate_ident([],_,0).
+	
+evaluate_ident(Ident,[Ident = Value | _], Value).
 
-evaluate(ident(X),+[X,Y|Vars],-[X,Y|Vars]):-
-
-evaluate(ident(X),+[],-[X,0]).
-	
-	
-	
-/*
-eval_statement(+ParseTree,+VariablesIn,-VariablesOut):-
-eval_assign(+ParseTree,+VariablesIn,-VariablesOut):-
-eval_expr(+ParseTree,+VariablesIn,-VariablesOut):-
-eval_term(+ParseTree,+VariablesIn,-VariablesOut):-
-eval_factor(+ParseTree,+VariablesIn,-VariablesOut):-
-eval_num(+ParseTree,+VariablesIn,-VariablesOut):-
-eval_id(+Id,+VariablesIn,-VariablesOut):-
-	
-eval_id(+Id,[],-[Id, 0]).
-*/
+evaluate_ident(+Ident,+[_ = _|Rest],-Value):-
+	evaluate_ident(+Ident, Rest, -Value).
