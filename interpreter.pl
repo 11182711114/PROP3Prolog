@@ -86,6 +86,16 @@ write_list(Stream,[Ident = Value|Vars]):-
 /*
 	DEBUG
 */
+test:-
+	tokenize('program2.txt',Tokens), 
+	parse(Tree, Tokens, []), 
+	db-output('outTree.txt',Tree), 
+	open('outTokens.txt',write,Outstream), 
+	write(Outstream, Tokens),
+	write(Outstream, '\n'),
+	write(Outstream, Tree),
+	close(Outstream).
+
 write-out(Program,OutputFile):-
 	block(ParseTree,Program,[]),
 	db-output(OutputFile,ParseTree).
@@ -107,55 +117,64 @@ parse(-ParseTree)-->
 parse(ParseTree) -->
 	block(ParseTree).
 
-block(block('left_curly', S, 'right_curly')) -->
-	['{'],
-	stmts(S),
-	['}'].
-stmts(statements) -->		
+block(block(LC, S, RC)) -->
+	left_curly(LC),
+	statements(S),
+	right_curly(RC).
+statements(statements) -->		
 	[].
-stmts(statements(A, S)) --> 	
-	assign(A), 
-	stmts(S).
-assign(assignment(I, 'assign_op', E, 'semicolon')) --> 	
-	id(I), 
-	[=], 
-	expr(E), 
-	[;].
-expr(expression(T)) -->		
+statements(statements(A, S)) --> 	
+	assignment(A), 
+	statements(S).
+assignment(assignment(I, AO, E, Semi)) --> 	
+	ident(I), 
+	assign_op(AO), 
+	expression(E), 
+	semicolon(Semi).
+expression(expression(T)) -->		
 	term(T).
-expr(expression(T, 'add_op', E))	-->		
+expression(expression(T, AO, E))	-->		
 	term(T), 
-	[+], 
-	expr(E).
-expr(expression(T, 'sub_op', E))	-->		
+	add_op(AO), 
+	expression(E).
+expression(expression(T, SO, E))	-->		
 	term(T), 
-	[-], 
-	expr(E).
+	sub_op(SO), 
+	expression(E).
 term(term(F)) -->		
 	factor(F).
-term(term(F, 'mult_op',T)) -->		
+term(term(F, MO,T)) -->		
 	factor(F), 
-	[*], 
+	mult_op(MO), 
 	term(T).
-term(term(F, 'div_op',T)) -->		
+term(term(F, DO,T)) -->		
 	factor(F), 
-	[/], 
+	div_op(DO), 
 	term(T).
 factor(factor(N)) -->		
-	num(N).
+	int(N).
 factor(factor(I)) -->		
-		id(I).
-factor(factor('left_paren', E, 'right_paren')) -->		
-	['('], 
-	expr(E), 
-	[')'].
-num(int(I)) -->		
+	ident(I).
+factor(factor(LP, E, RP)) -->		
+	left_paren(LP), 
+	expression(E), 
+	right_paren(RP).
+int(int(I)) -->		
 	[I], 
 	{integer(I)}.
-id(ident(I)) -->		
+ident(ident(I)) -->		
 	[I], 
 	{atom(I)}.
-
+assign_op(assign_op) --> [=].
+add_op(add_op) --> [+].
+sub_op(sub_op) --> [-].
+mult_op(mult_op) --> [*].
+div_op(div_op) --> [/].
+left_paren(left_paren) --> ['('].
+right_paren(right_paren) --> [')'].
+left_curly(left_curly) --> ['{'].
+right_curly(right_curly) --> ['}'].
+semicolon(semicolon) --> [;].
 /***
 
 	
@@ -166,17 +185,18 @@ evaluate(+ParseTree,+VariablesIn,-VariablesOut):-
 ***/
 	
 /* WRITE YOUR CODE FOR THE EVALUATOR HERE */
-evaluate(+block(_,Stmts,_),+VariablesIn,-VariablesOut):-
-	evaluate_stmts(Stmts,VariablesIn,VariablesOut).
+
+evaluate(block(left_curly,Statements,right_curly),+VariablesIn,-VariablesOut):-
+	evaluate_statements(Statements,VariablesIn,VariablesOut).
 
 %% Empty statement -> finished	
-evaluate_stmts(+statements,+VariablesIn,-VariablesIn).
+evaluate_statements(statements,+VariablesIn,-VariablesIn).
 
-evaluate_stmts(statements(Assign,Stmts),VariablesIn,VariablesOut):-
+evaluate_statements(statements(Assign,Statements),VariablesIn,VariablesOut):-
 	evaluate_assign(Assign,VariablesIn,VariablesNew),
-	evaluate_stmts(Stmts,VariablesNew,VariablesOut).
+	evaluate_statements(Statements,VariablesNew,VariablesOut).
 
-evaluate_assign(assignment(ident(Ident),'assign_op',Expr,_),VariablesIn,[Ident = Value | VariablesIn]):-
+evaluate_assign(assignment(ident(Ident),assign_op,Expr,_),VariablesIn,[Ident = Value | VariablesIn]):-
 	evaluate_expr(Expr,nil,0,Value,VariablesIn).
 
 evaluate_expr(expression(Term),Op,Prec,Res,VariablesIn):-
@@ -201,10 +221,10 @@ evaluate_factor(factor(ident(Ident)),Res,VariablesIn):-
 evaluate_factor(factor(_,Expr,_), Res,VariablesIn):-
 	evaluate_expr(Expr,nil,0,Res,VariablesIn).
 
-eval(X,Y,'add_op',X+Y).
-eval(X,Y,'sub_op',X-Y).
-eval(X,Y,'mult_op',X*Y).
-eval(X,Y,'div_op',X/Y).
+eval(X,Y,add_op,X+Y).
+eval(X,Y,sub_op,X-Y).
+eval(X,Y,mult_op,X*Y).
+eval(X,Y,div_op,X/Y).
 eval(_,Y,nil,Y).
 	
 	
