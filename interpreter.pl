@@ -104,8 +104,10 @@ parse(-ParseTree)-->
 ***/
 
 /* WRITE YOUR CODE FOR THE PARSER HERE */
-parse(block('left_curly', S, 'right_curly')) --> 	
-	stmts(S).
+block(block('left_curly', S, 'right_curly')) -->
+	['{'],
+	stmts(S),
+	['}'].
 stmts(statements) -->		
 	[].
 stmts(statements(A, S)) --> 	
@@ -150,8 +152,7 @@ num(int(I)) -->
 id(ident(I)) -->		
 	[I], 
 	{atom(I)}.
-	
-parse(L,T) :- phrase(parse(L),T).
+
 /***
 
 	
@@ -162,10 +163,6 @@ evaluate(+ParseTree,+VariablesIn,-VariablesOut):-
 ***/
 	
 /* WRITE YOUR CODE FOR THE EVALUATOR HERE */
-/* difference(+A,+B,-C): C is the difference of the two sets A and B (A-B), represented as lists. */ 
-difference([],_Ys,[]).
-difference([X|Xs],Ys,Zs):- member(X,Ys), difference(Xs,Ys,Zs).
-difference([X|Xs],Ys,[X|Zs]):- not_member(X,Ys), difference(Xs,Ys,Zs).
 
 evaluate(+ParseTree,+VariablesIn,-VariablesOut):-
 
@@ -177,25 +174,25 @@ evaluate(statements,+VariablesIn,-VariablesIn).
 
 evaluate(statements(Assign,Stmts),+VariablesIn,-VariablesOut):-
 
-evaluate(assignment(Ident,_,Expr,_),+VariablesIn,-VariablesOut):-
+evaluate(assignment(Ident,'assign_op',Expr,'semicolon'),+VariablesIn,-VariablesOut):-
 
 evaluate(expression(Term),+VariablesIn,-VariablesOut):-
 
-evaluate(expression(Term,PlusOrMinusOp,Expr),+VariablesIn,-VariablesOut):-
+evaluate(expression(Term,'plus_op',Expr),+VariablesIn,-VariablesOut):-
 
-evaluate(expression(Term,PlusOrMinusOp,Expr),+VariablesIn,-VariablesOut):-
+evaluate(expression(Term,'minus_op',Expr),+VariablesIn,-VariablesOut):-
 
 evaluate(term(X),+VariablesIn,-VariablesOut):-
 
-evaluate(term(Factor,MultOrDivOp,Term),+VariablesIn,-VariablesOut):-
+evaluate(term(Factor,'mult_op',Term),+VariablesIn,-VariablesOut):-
 
-evaluate(term(Factor,MultOrDivOp,Term),+VariablesIn,-VariablesOut):-
+evaluate(term(Factor,'div_op',Term),+VariablesIn,-VariablesOut):-
 
 evaluate(factor(Int),+VariablesIn,-VariablesOut):-
 
 evaluate(factor(Id),+VariablesIn,-VariablesOut):-
 
-evaluate(factor(_,Expr,_),+VariablesIn,-VariablesOut):-
+evaluate(factor('left_paren',Expr,'right_paren'),+VariablesIn,-VariablesOut):-
 
 evaluate(int(X),+VariablesIn,-VariablesOut):-
 	
@@ -204,7 +201,6 @@ evaluate(ident(X),+[X,Y|Vars],-[X,Y|Vars]).
 evaluate(ident(X),+[X,Y|Vars],-[X,Y|Vars]):-
 
 evaluate(ident(X),+[],-[X,0]).
-	
 	
 	
 	
