@@ -84,7 +84,7 @@ write_list(Stream,[Ident = Value|Vars]):-
 	
 	
 /*
-	DEBUG
+	DEBUG [c=4-(3-(1*2+(3-4)/5+6/(5/2)))+(1*2+(3-4)/5), b=4-(3-(1*2+(3-4)/5+6/(5/2))), a=1*2+(3-4)/5]
 */
 test:-
 	tokenize('program2.txt',Tokens), 
@@ -95,7 +95,16 @@ test:-
 	write(Outstream, '\n'),
 	write(Outstream, Tree),
 	close(Outstream).
+	
+test_eval1(Tokens, Tree, Eval):-
+	tokenize('E:/code/prolog/prop.assign3/program1.txt',Tokens), 
+	assignment(Tree, Tokens, []), 
+	evaluate_assign(Tree,[],Eval).
 
+test_eval2(Tree, VariablesOut):-
+	parse(Tree, [ '{',a, =, 1, *, 2, +, '(', 3, -, 4, ')', /, 5, ;, b, =, 4, -, 3, -, a, +, 6, /, 5, /, 2, ;, c, =, b, +, a, ;,'}' ] , []), 
+	evaluate(Tree,[], VariablesOut).	
+	
 write-out(Program,OutputFile):-
 	block(ParseTree,Program,[]),
 	db-output(OutputFile,ParseTree).
@@ -183,54 +192,176 @@ evaluate(+ParseTree,+VariablesIn,-VariablesOut):-
 	after evaluation as a list of variables and their values in 
 	the form [var = value, ...].
 ***/
+
+/* WRITE YOUR CODE FOR THE EVALUATOR HERE */	
+
+/*
+evaluate(ParseTree, VariablesIn, VariablesOut):-
+	eval_block(ParseTree,[], VariablesIn, Eval, VariablesOut).
+
+eval_block(block(LC, Stmts, RC), VariablesIn, VariablesOut) -->
+	left_curly(LC),
+	eval_stmts(Stmts, VariablesIn, VariablesOut),
+	right_curly(RC).
+
+eval_stmts(statements, Variables, Variables) --> [].
+
+eval_stmts(statements(Assign, Stmts), VariablesIn, VariablesOut) -->
+	eval_assign(Assign, VariablesIn, FirstOut),
+	eval_stmts(Stmts, FirstOut, VariablesOut).
+
+eval_assign(assignment(Id, Op, Expr, Semi), VariablesIn, VariablesOut) --> 
+	eval_ident(Id, IdName),
+	assign_op(Op),
+	eval_expr(Expr, VariablesIn, Value),
+	semicolon(Semi),
+	{add_ident_list(IdName = Value, VariablesIn, VariablesOut}.
+
+eval_expr(expression(Term), VariablesIn, Value) --> 
+	eval_term(Term, VariablesIn, Value).
+
+eval_expr(expression(Term, Op, Expr), VariablesIn, Val1 + Val2) --> 
+	eval_term(Term, VariablesIn, Val1),
+	add_op(Op),
+	eval_expr(Expr, VariablesIn, Val2).
+
+eval_expr(expression(Term, Op, Expr), VariablesIn, Val1 - Val2) --> 
+	eval_term(Term, VariablesIn, Val1),
+	sub_op(Op),
+	eval_expr(Expr, VariablesIn, Val2).
+
+rest_expr(Op, expression(Term))	
 	
-/* WRITE YOUR CODE FOR THE EVALUATOR HERE */
+eval_term(term(Factor), VariablesIn, Value) --> 
+	eval_factor(Factor, VariablesIn, Value).
 
-evaluate(block(left_curly,Statements,right_curly),+VariablesIn,-VariablesOut):-
-	evaluate_statements(Statements,VariablesIn,VariablesOut).
+eval_term(term(Factor, Op, Term), VariablesIn, Val1 * Val2) --> 
+	eval_factor(Factor, VariablesIn, Val1),
+	mult_op(Op),
+	eval_term(Term, VariablesIn, Val2).
 
-%% Empty statement -> finished	
-evaluate_statements(statements,+VariablesIn,-VariablesIn).
+eval_term(term(Factor, Op, Term), VariablesIn, Val1 / Val2) --> 
+	eval_factor(Factor, VariablesIn, Val1),
+	div_op(Op),
+	eval_term(Term, VariablesIn, Val2).
+	
+eval_factor(factor(T), _VariablesIn, Value) --> 
+	eval_int(T, Value).
+	
+eval_factor(factor(Ident), VariablesIn, Value) --> 
+	eval_ident(Ident, VariablesIn, Value).
 
-evaluate_statements(statements(Assign,Statements),VariablesIn,VariablesOut):-
-	evaluate_assign(Assign,VariablesIn,VariablesNew),
-	evaluate_statements(Statements,VariablesNew,VariablesOut).
+eval_factor(factor(LP, Expr, RP), VariablesIn, Value) -->
+	left_paren(LP),
+	eval_expr(Expr, VariablesIn, Value),
+	right_paren(RP).
 
-evaluate_assign(assignment(ident(Ident),assign_op,Expr,_),VariablesIn,[Ident = Value | VariablesIn]):-
-	evaluate_expr(Expr,nil,0,Value,VariablesIn).
+eval_int(int(I), I) --> 
+	[I],
+	{integer(I)}.
+eval_ident(ident(I), VariablesIn, IValue) -->
+	[I],
+	{atom(I), ident_from_list(I,VariablesIn, IValue)}.
+	
+eval_ident(ident(I), I) -->
+	[I],
+	{atom(I)}.
+*/
+evaluate(ParseTree, VariablesIn, VariablesOut):-
+    eval_block(ParseTree, VariablesIn, VariablesOut).
 
-evaluate_expr(expression(Term),Op,Prec,Res,VariablesIn):-
-	evaluate_term(Term,nil,0,Res2,VariablesIn),
-	eval(Prec,Res2,Op,Res).
-evaluate_expr(expression(Term,Op1,Expr),Op2,Prec,Res,VariablesIn):-
-	evaluate_term(Term,nil,0,Res2,VariablesIn),
-	evaluate_expr(Expr,Op1,Res3,Res,VariablesIn),
-	eval(Prec,Res2,Op2,Res3).
+eval_block(block(left_curly,Stmts,right_curly), VariablesIn, VariablesOut) :-
+    eval_stmts(Stmts, VariablesIn, VariablesOut).
 
-evaluate_term(term(Factor),Op,Prec,Res,VariablesIn):-
-	evaluate_factor(Factor,Res2,VariablesIn),
-	eval(Prec,Res2,Op,Res).
-evaluate_term(term(Factor,Op1,Term),Op2,Prec,Res,VariablesIn):-
-	evaluate_factor(Factor,Res2,VariablesIn),
-	evaluate_term(Term,Op1,Res3,Res,VariablesIn),
-	eval(Prec,Res2,Op2,Res3).
-
-evaluate_factor(factor(int(Int)),Int,_).
-evaluate_factor(factor(ident(Ident)),Res,VariablesIn):-
-	evaluate_ident(Ident,VariablesIn,Res).
-evaluate_factor(factor(_,Expr,_), Res,VariablesIn):-
-	evaluate_expr(Expr,nil,0,Res,VariablesIn).
-
-eval(X,Y,add_op,X+Y).
-eval(X,Y,sub_op,X-Y).
-eval(X,Y,mult_op,X*Y).
-eval(X,Y,div_op,X/Y).
-eval(_,Y,nil,Y).
 	
 	
-evaluate_ident([],_,0).
-	
-evaluate_ident(Ident,[Ident = Value | _], Value).
+eval_stmts(statements, Variables, Variables).
 
-evaluate_ident(+Ident,+[_ = _|Rest],-Value):-
-	evaluate_ident(+Ident, Rest, -Value).
+eval_stmts(statements(Assign,Stmts), VariablesIn, VariablesOut) :-
+    eval_assign(Assign, VariablesIn, VariablesOutTemp),
+    eval_stmts(Stmts, VariablesOutTemp, VariablesOut).
+
+
+	
+eval_assign(assignment(ident(Ident),assign_op,Expr,semicolon), VariablesIn, VariablesOut) :-
+    eval_expr(Expr, VariablesIn, ExprValue),
+    append([Ident = ExprValue], VariablesIn, VariablesOut).
+
+	
+	
+eval_expr(expression(_,Operator,Expr), Value, VariablesIn, ValueOut) :-
+    next_expr_value(Expr, VariablesIn, NextVal),
+    eval(Value, Operator, NextVal, Result),
+    eval_expr(Expr, Result, VariablesIn, ValueOut).
+
+
+eval_expr(_Node, Value, _VariablesIn, Value).
+
+
+eval_expr(expression(Term,Operator,Expr), VariablesIn, ValueOut) :-
+    eval_term(Term, VariablesIn, Value),
+    next_expr_value(Expr, VariablesIn, NextVal),
+    eval(Value, Operator, NextVal, Result),
+    eval_expr(Expr, Result, VariablesIn, ValueOut).
+
+
+eval_expr(expression(Term), VariablesIn, ValueOut) :-
+    eval_term(Term, VariablesIn, ValueOut).
+
+	
+next_expr_value(expression(Term), VariablesIn, ValueOut) :-
+    eval_term(Term, VariablesIn, ValueOut).
+next_expr_value(expression(Term,_,_), VariablesIn, ValueOut) :-
+    eval_term(Term, VariablesIn, ValueOut).
+
+	
+	
+
+eval_term(term(_,Operator,Term), Value, VariablesIn, ValueOut) :-
+    next_term_value(Term, VariablesIn, NextVal),
+    eval(Value, Operator, NextVal, Result),
+    eval_term(Term, Result, VariablesIn, ValueOut).
+
+
+eval_term(term(factor(_)), Value, _VariablesIn, Value).
+
+
+eval_term(term(Factor,Operator,Term), VariablesIn, Value) :-
+    eval_factor(Factor, VariablesIn, FactorValue),
+    next_term_value(Term, VariablesIn, NextVal),
+    eval(FactorValue, Operator, NextVal, Result),
+    eval_term(Term, Result, VariablesIn, Value).
+
+
+eval_term(term(Factor), VariablesIn, Value) :-
+    eval_factor(Factor, VariablesIn, Value).
+
+	
+next_term_value(term(Factor), VariablesIn, Value) :-
+    eval_factor(Factor, VariablesIn, Value).
+next_term_value(term(Factor,_,_), VariablesIn, Value) :-
+    eval_factor(Factor, VariablesIn, Value).
+
+	
+	
+
+eval_factor(factor(left_paren,Expr,right_paren), VariablesIn, Value) :-
+    eval_expr(Expr, VariablesIn, Value).
+
+
+eval_factor(factor(int(Int)), _VariablesIn, Int).
+
+eval_factor(factor(ident(Ident)), VariablesIn, Value) :-
+    ident_from_list(Ident, VariablesIn, Value).
+
+ident_from_list(_,[],0).
+ident_from_list(Ident, [Ident = Value |_], Value):- !.
+ident_from_list(Ident, [NotIdent |RestList], Value) :-
+	Ident \== NotIdent,
+    ident_from_list(Ident, RestList, Value).
+	
+	
+eval(Value1, add_op, Value2, Value):-	Value is Value1 + Value2.
+eval(Value1, sub_op, Value2, Value):-	Value is Value1 - Value2.
+eval(Value1, mult_op, Value2, Value):-	Value is Value1 * Value2.
+eval(Value1, div_op, Value2, Value):-	Value is Value1 / Value2.
