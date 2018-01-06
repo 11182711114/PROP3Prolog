@@ -203,38 +203,41 @@ eval_block(block(left_curly,Stmts,right_curly), VariablesIn, VariablesOut) :-
 
 	
 %%%%%% STATEMENTS %%%%%%	
+
+%%Empty statements -> done
 eval_stmts(statements, Variables, Variables).
 
 eval_stmts(statements(Assign,Stmts), VariablesIn, VariablesOut) :-
     eval_assign(Assign, VariablesIn, VariablesOutTemp),
     eval_stmts(Stmts, VariablesOutTemp, VariablesOut).
 
-
-	
+%%%%%% ASSIGN %%%%%%	
 eval_assign(assignment(ident(Ident),assign_op,Expr,semicolon), VariablesIn, VariablesOut) :-
     eval_expr(Expr, VariablesIn, ExprValue),
 	add_ident_list(Ident = ExprValue, VariablesIn, VariablesOut).
 
 	
 %%%%%% EXPRESSION %%%%%%
-eval_expr(expression(_,Operator,Expr), Value, VariablesIn, ValueOut) :-
-    next_expr_value(Expr, VariablesIn, NextVal),
-    eval(Value, Operator, NextVal, Result),
-    eval_expr(Expr, Result, VariablesIn, ValueOut).
 
-
-eval_expr(_Node, Value, _VariablesIn, Value).
-
-
+%% Expression with more than term
 eval_expr(expression(Term,Operator,Expr), VariablesIn, ValueOut) :-
     eval_term(Term, VariablesIn, Value),
     next_expr_value(Expr, VariablesIn, NextVal),
     eval(Value, Operator, NextVal, Result),
     eval_expr(Expr, Result, VariablesIn, ValueOut).
 
-
 eval_expr(expression(Term), VariablesIn, ValueOut) :-
     eval_term(Term, VariablesIn, ValueOut).
+	
+	
+%% Expression with more than term
+eval_expr(expression(_,Operator,Expr), Value, VariablesIn, ValueOut) :-
+    next_expr_value(Expr, VariablesIn, NextVal),
+    eval(Value, Operator, NextVal, Result),
+    eval_expr(Expr, Result, VariablesIn, ValueOut).
+
+%% Expression with only term
+eval_expr(_, Value, _VariablesIn, Value).
 
 	
 next_expr_value(expression(Term), VariablesIn, ValueOut) :-
@@ -245,14 +248,6 @@ next_expr_value(expression(Term,_,_), VariablesIn, ValueOut) :-
 	
 	
 %%%%%% TERM %%%%%%
-eval_term(term(_,Operator,Term), Value, VariablesIn, ValueOut) :-
-    next_term_value(Term, VariablesIn, NextVal),
-    eval(Value, Operator, NextVal, Result),
-    eval_term(Term, Result, VariablesIn, ValueOut).
-
-
-eval_term(term(factor(_)), Value, _VariablesIn, Value).
-
 
 eval_term(term(Factor,Operator,Term), VariablesIn, Value) :-
     eval_factor(Factor, VariablesIn, FactorValue),
@@ -263,6 +258,14 @@ eval_term(term(Factor,Operator,Term), VariablesIn, Value) :-
 
 eval_term(term(Factor), VariablesIn, Value) :-
     eval_factor(Factor, VariablesIn, Value).
+	
+	
+eval_term(term(_,Operator,Term), Value, VariablesIn, ValueOut) :-
+    next_term_value(Term, VariablesIn, NextVal),
+    eval(Value, Operator, NextVal, Result),
+    eval_term(Term, Result, VariablesIn, ValueOut).
+
+eval_term(term(factor(_)), Value, _VariablesIn, Value).
 
 	
 next_term_value(term(Factor), VariablesIn, Value) :-
@@ -270,12 +273,10 @@ next_term_value(term(Factor), VariablesIn, Value) :-
 next_term_value(term(Factor,_,_), VariablesIn, Value) :-
     eval_factor(Factor, VariablesIn, Value).
 
-	
 
 %%%%%% FACTOR %%%%%%
 eval_factor(factor(left_paren,Expr,right_paren), VariablesIn, Value) :-
     eval_expr(Expr, VariablesIn, Value).
-
 
 eval_factor(factor(int(Int)), _VariablesIn, Int).
 
