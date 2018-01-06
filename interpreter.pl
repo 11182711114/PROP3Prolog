@@ -195,78 +195,6 @@ evaluate(+ParseTree,+VariablesIn,-VariablesOut):-
 
 /* WRITE YOUR CODE FOR THE EVALUATOR HERE */	
 
-/*
-evaluate(ParseTree, VariablesIn, VariablesOut):-
-	eval_block(ParseTree,[], VariablesIn, Eval, VariablesOut).
-
-eval_block(block(LC, Stmts, RC), VariablesIn, VariablesOut) -->
-	left_curly(LC),
-	eval_stmts(Stmts, VariablesIn, VariablesOut),
-	right_curly(RC).
-
-eval_stmts(statements, Variables, Variables) --> [].
-
-eval_stmts(statements(Assign, Stmts), VariablesIn, VariablesOut) -->
-	eval_assign(Assign, VariablesIn, FirstOut),
-	eval_stmts(Stmts, FirstOut, VariablesOut).
-
-eval_assign(assignment(Id, Op, Expr, Semi), VariablesIn, VariablesOut) --> 
-	eval_ident(Id, IdName),
-	assign_op(Op),
-	eval_expr(Expr, VariablesIn, Value),
-	semicolon(Semi),
-	{add_ident_list(IdName = Value, VariablesIn, VariablesOut}.
-
-eval_expr(expression(Term), VariablesIn, Value) --> 
-	eval_term(Term, VariablesIn, Value).
-
-eval_expr(expression(Term, Op, Expr), VariablesIn, Val1 + Val2) --> 
-	eval_term(Term, VariablesIn, Val1),
-	add_op(Op),
-	eval_expr(Expr, VariablesIn, Val2).
-
-eval_expr(expression(Term, Op, Expr), VariablesIn, Val1 - Val2) --> 
-	eval_term(Term, VariablesIn, Val1),
-	sub_op(Op),
-	eval_expr(Expr, VariablesIn, Val2).
-
-rest_expr(Op, expression(Term))	
-	
-eval_term(term(Factor), VariablesIn, Value) --> 
-	eval_factor(Factor, VariablesIn, Value).
-
-eval_term(term(Factor, Op, Term), VariablesIn, Val1 * Val2) --> 
-	eval_factor(Factor, VariablesIn, Val1),
-	mult_op(Op),
-	eval_term(Term, VariablesIn, Val2).
-
-eval_term(term(Factor, Op, Term), VariablesIn, Val1 / Val2) --> 
-	eval_factor(Factor, VariablesIn, Val1),
-	div_op(Op),
-	eval_term(Term, VariablesIn, Val2).
-	
-eval_factor(factor(T), _VariablesIn, Value) --> 
-	eval_int(T, Value).
-	
-eval_factor(factor(Ident), VariablesIn, Value) --> 
-	eval_ident(Ident, VariablesIn, Value).
-
-eval_factor(factor(LP, Expr, RP), VariablesIn, Value) -->
-	left_paren(LP),
-	eval_expr(Expr, VariablesIn, Value),
-	right_paren(RP).
-
-eval_int(int(I), I) --> 
-	[I],
-	{integer(I)}.
-eval_ident(ident(I), VariablesIn, IValue) -->
-	[I],
-	{atom(I), ident_from_list(I,VariablesIn, IValue)}.
-	
-eval_ident(ident(I), I) -->
-	[I],
-	{atom(I)}.
-*/
 evaluate(ParseTree, VariablesIn, VariablesOut):-
     eval_block(ParseTree, VariablesIn, VariablesOut).
 
@@ -274,7 +202,7 @@ eval_block(block(left_curly,Stmts,right_curly), VariablesIn, VariablesOut) :-
     eval_stmts(Stmts, VariablesIn, VariablesOut).
 
 	
-	
+%%%%%% STATEMENTS %%%%%%	
 eval_stmts(statements, Variables, Variables).
 
 eval_stmts(statements(Assign,Stmts), VariablesIn, VariablesOut) :-
@@ -285,10 +213,10 @@ eval_stmts(statements(Assign,Stmts), VariablesIn, VariablesOut) :-
 	
 eval_assign(assignment(ident(Ident),assign_op,Expr,semicolon), VariablesIn, VariablesOut) :-
     eval_expr(Expr, VariablesIn, ExprValue),
-    append([Ident = ExprValue], VariablesIn, VariablesOut).
+	add_ident_list(Ident = ExprValue, VariablesIn, VariablesOut).
 
 	
-	
+%%%%%% EXPRESSION %%%%%%
 eval_expr(expression(_,Operator,Expr), Value, VariablesIn, ValueOut) :-
     next_expr_value(Expr, VariablesIn, NextVal),
     eval(Value, Operator, NextVal, Result),
@@ -316,7 +244,7 @@ next_expr_value(expression(Term,_,_), VariablesIn, ValueOut) :-
 
 	
 	
-
+%%%%%% TERM %%%%%%
 eval_term(term(_,Operator,Term), Value, VariablesIn, ValueOut) :-
     next_term_value(Term, VariablesIn, NextVal),
     eval(Value, Operator, NextVal, Result),
@@ -343,8 +271,8 @@ next_term_value(term(Factor,_,_), VariablesIn, Value) :-
     eval_factor(Factor, VariablesIn, Value).
 
 	
-	
 
+%%%%%% FACTOR %%%%%%
 eval_factor(factor(left_paren,Expr,right_paren), VariablesIn, Value) :-
     eval_expr(Expr, VariablesIn, Value).
 
@@ -354,11 +282,14 @@ eval_factor(factor(int(Int)), _VariablesIn, Int).
 eval_factor(factor(ident(Ident)), VariablesIn, Value) :-
     ident_from_list(Ident, VariablesIn, Value).
 
+	
+%%%%%% HELPERS %%%%%%	
+add_ident_list(Ident, VariablesIn, [Ident|VariablesIn]).
+
 ident_from_list(_,[],0).
-ident_from_list(Ident, [Ident = Value |_], Value):- !.
-ident_from_list(Ident, [NotIdent |RestList], Value) :-
-	Ident \== NotIdent,
-    ident_from_list(Ident, RestList, Value).
+ident_from_list(Ident, [Ident = Value |_], Value):- !. %% Red cut
+ident_from_list(Ident, [_|RestList], Value) :-
+	ident_from_list(Ident, RestList, Value).
 	
 	
 eval(Value1, add_op, Value2, Value):-	Value is Value1 + Value2.
